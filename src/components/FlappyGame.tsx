@@ -72,7 +72,7 @@ export default function FlappyGame({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }); // Optimization hint
     if (!ctx) return;
 
     if (isPlaying) {
@@ -92,12 +92,11 @@ export default function FlappyGame({
     function loop() {
       if (!gameState.current.active) return;
       
-      // We wrap the whole cycle in try-catch to keep the game alive
       try {
         update();
         draw();
       } catch (e) {
-        console.error("Game loop error (ignoring to keep playing):", e);
+        console.error("Game loop error:", e);
       }
       
       requestRef.current = requestAnimationFrame(loop);
@@ -190,83 +189,98 @@ export default function FlappyGame({
       }
     }
 
-    // Helper to safely draw an image or a fallback rect
     function safeDrawImage(img: HTMLImageElement, x: number, y: number, w: number, h: number, fallbackColor: string) {
       if (!ctx) return;
+      // FIX 2: Round coordinates to avoid sub-pixel jiggling
+      const drawX = Math.floor(x);
+      const drawY = Math.floor(y);
+      const drawW = Math.floor(w);
+      const drawH = Math.floor(h);
+
       try {
         if (img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, x, y, w, h);
+          ctx.drawImage(img, drawX, drawY, drawW, drawH);
         } else {
           throw new Error("Image broken");
         }
       } catch (e) {
-        // Fallback: Draw a colored rect if image fails
         ctx.fillStyle = fallbackColor;
-        ctx.fillRect(x, y, w, h);
+        ctx.fillRect(drawX, drawY, drawW, drawH);
       }
     }
 
     function draw() {
       const state = gameState.current;
-      ctx!.clearRect(0, 0, dimensions.width, dimensions.height);
+      if (!ctx) return;
+      
+      ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
       // BG
       safeDrawImage(assets.current.bg, 0, 0, dimensions.width, dimensions.height, '#1a1a1a');
 
+      // FIX 1: Increase PIPE_HEIGHT to 1600 to cover tall screens
+      const PIPE_HEIGHT = 1600;
+
       // Pipes
       state.pipes.forEach(p => {
-        // Top Pipe
-        safeDrawImage(assets.current.top, p.x, p.top - 600, 52, 600, '#22c55e');
-        // Bottom Pipe
-        safeDrawImage(assets.current.bot, p.x, p.bottom, 52, 600, '#22c55e');
+        // Top Pipe: Draw from (gap top - big height)
+        safeDrawImage(assets.current.top, p.x, p.top - PIPE_HEIGHT, 52, PIPE_HEIGHT, '#22c55e');
+        
+        // Bottom Pipe: Draw from (gap bottom) down to big height
+        safeDrawImage(assets.current.bot, p.x, p.bottom, 52, PIPE_HEIGHT, '#22c55e');
       });
 
       // Coins
       state.coins.forEach(c => {
         if (!c.collected) {
-           // We draw the coin manually to support the circular fallback
+           const cx = Math.floor(c.x);
+           const cy = Math.floor(c.y);
+           
            try {
              if (assets.current.coin.complete && assets.current.coin.naturalWidth > 0) {
-                ctx!.drawImage(assets.current.coin, c.x, c.y, 30, 30);
+                ctx.drawImage(assets.current.coin, cx, cy, 30, 30);
              } else {
                 throw new Error("Coin broken");
              }
            } catch(e) {
-              ctx!.fillStyle = '#ffd700';
-              ctx!.beginPath();
-              ctx!.arc(c.x + 15, c.y + 15, 12, 0, Math.PI * 2);
-              ctx!.fill();
-              ctx!.strokeStyle = 'white';
-              ctx!.stroke();
+              ctx.fillStyle = '#ffd700';
+              ctx.beginPath();
+              ctx.arc(cx + 15, cy + 15, 12, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = 'white';
+              ctx.stroke();
            }
         }
       });
 
       // Bird
+      const bx = Math.floor(30 - 21);
+      const by = Math.floor(state.birdY - 21);
+      
       try {
         if (assets.current.bird.complete && assets.current.bird.naturalWidth > 0) {
-          ctx!.drawImage(assets.current.bird, 30 - 21, state.birdY - 21, 42, 42);
+          ctx.drawImage(assets.current.bird, bx, by, 42, 42);
         } else {
           throw new Error("Bird broken");
         }
       } catch (e) {
-        ctx!.fillStyle = '#fbbf24';
-        ctx!.beginPath();
-        ctx!.arc(30, state.birdY, 16, 0, Math.PI * 2);
-        ctx!.fill();
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(30, state.birdY, 16, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       // UI
-      ctx!.fillStyle = "white";
-      ctx!.font = "bold 24px 'Courier New', sans-serif";
-      ctx!.textAlign = "center";
-      ctx!.fillText(`${state.score}`, dimensions.width / 2, 80);
+      ctx.fillStyle = "white";
+      ctx.font = "bold 24px 'Courier New', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${state.score}`, dimensions.width / 2, 80);
       
-      ctx!.textAlign = "right";
-      ctx!.fillStyle = "#ffd700";
-      ctx!.font = "bold 16px Arial";
-      ctx!.fillText(`Coins: ${sessionCoins.current}/${maxCoins}`, dimensions.width - 20, 40);
-      ctx!.textAlign = "left"; 
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#ffd700";
+      ctx.font = "bold 16px Arial";
+      ctx.fillText(`Coins: ${sessionCoins.current}/${maxCoins}`, dimensions.width - 20, 40);
+      ctx.textAlign = "left"; 
     }
 
     function endGame() {
