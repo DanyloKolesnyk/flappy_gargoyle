@@ -2,8 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Create Mini App</title>
+    
+    <link rel="manifest" href="/manifest.json" />
+
+    <meta 
+      property="fc:frame" 
+      content='{
+        "version": "next",
+        "imageUrl": "https://YOUR-VERCEL-LINK.vercel.app/bg.png",
+        "button": {
+          "title": "Play Flappy Gargoyle",
+          "action": {
+            "type": "launch_frame",
+            "name": "Flappy Gargoyle",
+            "url": "https://YOUR-VERCEL-LINK.vercel.app",
+            "splashImageUrl": "https://YOUR-VERCEL-LINK.vercel.app/splash.png",
+            "splashBackgroundColor": "#0d0d0d"
+          }
+        }
+      }' 
+    />
+    
+    <title>Flappy Gargoyle</title>
   </head>
   <body>
     <div id="root"></div>

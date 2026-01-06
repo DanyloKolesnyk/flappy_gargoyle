@@ -2,9 +2,9 @@
   "name": "Flappy Gargoyle",
   "version": "1.0.0",
   "description": "Fly, collect coins, and claim on Soneium!",
-  "iconUrl": "https://your-domain.com/icon.png", 
-  "homeUrl": "https://your-domain.com",
-  "splashImageUrl": "https://your-domain.com/splash.png",
+  "iconUrl": "https://https://flappy-gargoyle.vercel.app/icon.png", 
+  "homeUrl": "https://https://flappy-gargoyle.vercel.app",
+  "splashImageUrl": "https://https://flappy-gargoyle.vercel.app/splash.png",
   "splashBackgroundColor": "#0d0d0d",
-  "webhookUrl": "https://your-domain.com/api/webhook"
+  "webhookUrl": "https://https://flappy-gargoyle.vercel.app/api/webhook"
 }
