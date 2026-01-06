@@ -280,7 +280,7 @@ export default function FlappyGame({
     };
   }, [isPlaying, dimensions]);
 
-  const handleInput = (e: any) => {
+  const handleInput = () => {
     if (gameState.current.active) {
       gameState.current.birdVel = -6; 
     }
@@ -288,7 +288,7 @@ export default function FlappyGame({
 
   useEffect(() => {
      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.code === 'Space') handleInput(e);
+        if (e.code === 'Space') handleInput();
      };
      window.addEventListener('keydown', handleKeyDown);
      return () => window.removeEventListener('keydown', handleKeyDown);
