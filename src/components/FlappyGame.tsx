@@ -18,6 +18,10 @@ export default function FlappyGame({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>();
   
+  // Time tracking for consistent game speed
+  const lastTimeRef = useRef<number>(0);
+  const accumulatorRef = useRef<number>(0);
+  
   // Refs
   const onCoinCollectRef = useRef(onCoinCollect);
   const onGameOverRef = useRef(onGameOver);
@@ -72,7 +76,7 @@ export default function FlappyGame({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: false }); // Optimization hint
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
     if (isPlaying) {
@@ -86,18 +90,46 @@ export default function FlappyGame({
         frame: 0, 
         active: true
       };
-      loop();
+      
+      // Reset timing variables when game starts
+      lastTimeRef.current = 0;
+      accumulatorRef.current = 0;
+      
+      requestRef.current = requestAnimationFrame(loop);
     }
 
-    function loop() {
+    // --- THE NEW LOOP (Fixed Timestep) ---
+    function loop(timestamp: number) {
       if (!gameState.current.active) return;
       
-      try {
-        update();
-        draw();
-      } catch (e) {
-        console.error("Game loop error:", e);
+      // Initialize start time
+      if (lastTimeRef.current === 0) {
+        lastTimeRef.current = timestamp;
       }
+
+      // Calculate how much time passed since last frame
+      const deltaTime = timestamp - lastTimeRef.current;
+      lastTimeRef.current = timestamp;
+
+      // Add to accumulator
+      accumulatorRef.current += deltaTime;
+
+      // Safety: If device is lagging HUGE amount, don't spiral of death. Cap at 250ms.
+      if (accumulatorRef.current > 250) accumulatorRef.current = 250;
+
+      // CONSTANTS FOR 60 FPS LOGIC
+      const TARGET_FPS = 60;
+      const TIME_STEP = 1000 / TARGET_FPS; // ~16.66ms
+
+      // Update game logic in fixed chunks (e.g. 3 times if we lagged 50ms)
+      // This ensures the bird moves exactly the same distance per second on ALL devices
+      while (accumulatorRef.current >= TIME_STEP) {
+        update();
+        accumulatorRef.current -= TIME_STEP;
+      }
+
+      // Draw as often as possible (interpolating would be smoother, but this is fine for now)
+      draw();
       
       requestRef.current = requestAnimationFrame(loop);
     }
@@ -106,7 +138,7 @@ export default function FlappyGame({
       const state = gameState.current;
       const GRAVITY = 0.25;
       const PIPE_SPEED = 2.5; 
-      const PIPE_SPAWN_RATE = 120; 
+      const PIPE_SPAWN_RATE = 120; // 120 frames = 2 seconds at 60FPS
       const PIPE_GAP = 170; 
       
       const BIRD_HITBOX = 16;
@@ -191,7 +223,6 @@ export default function FlappyGame({
 
     function safeDrawImage(img: HTMLImageElement, x: number, y: number, w: number, h: number, fallbackColor: string) {
       if (!ctx) return;
-      // FIX 2: Round coordinates to avoid sub-pixel jiggling
       const drawX = Math.floor(x);
       const drawY = Math.floor(y);
       const drawW = Math.floor(w);
@@ -218,15 +249,12 @@ export default function FlappyGame({
       // BG
       safeDrawImage(assets.current.bg, 0, 0, dimensions.width, dimensions.height, '#1a1a1a');
 
-      // FIX 1: Increase PIPE_HEIGHT to 1600 to cover tall screens
+      // Taller Pipes to fix mobile gaps
       const PIPE_HEIGHT = 1600;
 
       // Pipes
       state.pipes.forEach(p => {
-        // Top Pipe: Draw from (gap top - big height)
         safeDrawImage(assets.current.top, p.x, p.top - PIPE_HEIGHT, 52, PIPE_HEIGHT, '#22c55e');
-        
-        // Bottom Pipe: Draw from (gap bottom) down to big height
         safeDrawImage(assets.current.bot, p.x, p.bottom, 52, PIPE_HEIGHT, '#22c55e');
       });
 
